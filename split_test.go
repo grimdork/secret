@@ -5,13 +5,14 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ncw/gmp"
-
 	"github.com/grimdork/secret"
+	"github.com/grimdork/secret/mersenne"
+	"github.com/ncw/gmp"
 )
 
 const testSecret = "secret string"
 
+// TestSplit runs Split() and verifies the Combine() output.
 func TestSplit(t *testing.T) {
 	t.Logf("Input string: '%s'", testSecret)
 	points := secret.Split([]byte(testSecret), 2, 4)
@@ -30,6 +31,7 @@ func TestSplit(t *testing.T) {
 	}
 }
 
+// TestConversion() verifies that ShareToString() and StringToShare() reverse each other's output.
 func TestConversion(t *testing.T) {
 	n := gmp.NewInt(math.MaxInt64)
 	t.Logf("Max int64 is %d", n.Int64())
@@ -44,6 +46,22 @@ func TestConversion(t *testing.T) {
 
 	if p.Y.Int64() != math.MaxInt64 {
 		t.Errorf("Expected %d, got %d", math.MaxInt64, p.Y.Int64())
+		t.FailNow()
+	}
+}
+
+// TestFixed intentionally tries a too small prime and checks that FixedSplit() does the correct thing.
+func TestFixed(t *testing.T) {
+	points := secret.FixedSplit([]byte(testSecret+testSecret), 2, 5, mersenne.Get(9))
+	for _, p := range points {
+		t.Logf("%s", secret.ShareToString(p))
+	}
+	points = []secret.Point{points[1], points[3]}
+	t.Logf("%#v", points)
+	s := secret.Combine(points)
+	t.Logf("Output string: '%s'", s)
+	if strings.Compare(string(s), testSecret+testSecret) != 0 {
+		t.Errorf("Error: result does not match input: %s", s)
 		t.FailNow()
 	}
 }

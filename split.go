@@ -18,15 +18,31 @@ type Point struct {
 //
 // The resulting slice of points will be numbered from 1 and up.
 func Split(secret []byte, t, n uint) []Point {
+	return FixedSplit(secret, t, n, nil)
+}
+
+// FixedSplit works like Split, with the option to specify a prime to use.
+// This allows uniform share lengths across different input sizes. The prime still
+// needs to be larger than the secret, and will be adjusted accordingly.
+func FixedSplit(secret []byte, t, n uint, prime *gmp.Int) []Point {
 	s := gmp.NewInt(0)
 	s.SetBytes([]byte(secret))
-	prime := mersenne.GetMinimum(s)
+	if prime == nil {
+		prime = mersenne.GetMinimum(s)
+	} else {
+		if prime.Cmp(s) < 0 {
+			prime = mersenne.GetMinimum(s)
+		}
+	}
+
 	if t < 2 {
 		t = 2
 	}
+
 	if n < t {
 		n = t + 1
 	}
+
 	coeff := randomPolynomial(t-1, s, prime)
 	return getPoints(coeff, n, prime)
 }
